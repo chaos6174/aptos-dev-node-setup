@@ -1,0 +1,48 @@
+# install Docker and docker-compose
+
+# install Docker
+wget -O get-docker.sh https://get.docker.com 
+sudo sh get-docker.sh
+rm -f get-docker.sh
+
+# install docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+#check docker and docker compose version
+docker -v
+docker-compose -v
+
+#download aptos files need to run node
+mkdir -p ~/aptos-node && cd ~/aptos-node
+wget -O ./docker-compose.yaml https://raw.githubusercontent.com/aptos-labs/aptos-core/main/docker/compose/public_full_node/docker-compose.yaml
+wget -O ./public_full_node.yaml https://raw.githubusercontent.com/jiangydev/aptos-node/main/public_full_node.yaml
+wget -O ./genesis.blob https://devnet.aptoslabs.com/genesis.blob
+wget -O ./waypoint.txt https://devnet.aptoslabs.com/waypoint.txt
+
+#creat static identiy
+# update docker mirror
+sudo docker pull aptoslab/tools:devnet
+# creat
+sudo docker run --rm aptoslab/tools:devnet sh -c "echo '开始生成私钥...' && aptos-operational-tool generate-key --encoding hex --key-type x25519 --key-file /root/private-key.txt && echo '\n\n开始生成公钥和 Peer ID...' && aptos-operational-tool extract-peer-from-file --encoding hex --key-file /root/private-key.txt --output-file /root/peer-info.yaml && echo '\n\n您的私钥：' && cat /root/private-key.txt && echo '\n\n您的公钥和 Peer ID 信息如下：' && cat /root/peer-info.yaml"
+
+#edit public full node.yaml and add identity info
+vi public_full_node.yaml
+
+#run node
+# update mirror
+sudo docker-compose pull
+#run  node 
+sudo docker-compose up -d
+
+
+#check node status
+sudo docker ps -a 
+
+#print your peer id
+curl 127.0.0.1:9101/metrics 2> /dev/null | grep -m 1 peer_id
+
+#check synchronizing status
+curl 127.0.0.1:9101/metrics 2> /dev/null | grep aptos_state_sync_version | grep type
+
+#compare the result to https://status.devnet.aptos.dev/
